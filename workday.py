@@ -46,10 +46,11 @@ for company_url in company_urls:
 
 while True:
     jobs = []
-    today = True
 
     for company_url in company_urls:
         jobstosend = []
+        today = True
+
         if "amazon" in company_url:
             driver.get(company_url)
             seturl = company_url
@@ -133,7 +134,7 @@ while True:
                 print(f"An error occurred while processing {company_url}: {str(e)}")
                 continue
     
-        print(f"jobs at {company_url.split('//')[1].split('.wd')[0]} opened today: ", len(job_ids_dict[company_urls[0]]))
+        print(f"jobs at {company_url.split('//')[1].split('.wd')[0]} \n", len(job_ids_dict[company_urls[0]]))
         print("New jobs added: ", len(jobstosend))
         for job_title, job_href, posted_on in jobstosend:
             # driver.get(job_href)
