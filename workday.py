@@ -53,44 +53,44 @@ while True:
         if "amazon" in company_url:
             driver.get(company_url)
             seturl = company_url
-            # try:
-            while today:
-                time.sleep(2)
-                wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'job-tile-lists')))
+            try:
+                while today:
+                    time.sleep(2)
+                    wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'job-tile-lists')))
 
-                # job_elements = driver.find_elements(By.XPATH, '//div[@class="job-tile-lists"]')
-                job_elements = driver.find_elements(By.CLASS_NAME, 'job-tile')
-                
-                print(len(job_elements))
-                # break
-                for job_element in job_elements:
-                    job_element = job_element.find_element(By.CLASS_NAME, 'job')
-                    job_title_element = job_element.find_element(By.CLASS_NAME, 'job-link')
-                    job_id_element = job_element.find_element(By.CLASS_NAME, 'list-unstyled').find_elements(By.TAG_NAME, 'li')[-1]
-                    job_id = job_id_element.text.split(":")[-1].strip()                    
-
-                    posted_div_element = job_element.find_elements(By.CLASS_NAME, 'info')[1]
-                    posted_on_element = posted_div_element.find_element(By.TAG_NAME, 'h2')
-                    updated_on_element = posted_div_element.find_element(By.CLASS_NAME, 'time-elapsed')
-                    posted_on = posted_on_element.text + "::" + updated_on_element.text
+                    jobs_stack = driver.find_elements(By.CLASS_NAME, 'job-tile-lists')[0]
+                    job_elements = jobs_stack.find_elements(By.CLASS_NAME, 'job-tile')
                     
-                    if datetime.now().strftime("%B %d, %Y").lower() in posted_on.lower():
-                        job_href = job_title_element.get_attribute('href')
-                        job_title = job_title_element.text
+                    print(len(job_elements))
+                    # break
+                    for job_element in job_elements:
+                        job_element = job_element.find_element(By.CLASS_NAME, 'job')
+                        job_title_element = job_element.find_element(By.CLASS_NAME, 'job-link')
+                        job_id_element = job_element.find_element(By.CLASS_NAME, 'list-unstyled').find_elements(By.TAG_NAME, 'li')[-1]
+                        job_id = job_id_element.text.split(":")[-1].strip()                    
 
-                        print(job_id, job_title, job_href, posted_on)
-                            # location = location_element.text
-                        if job_id not in job_ids_dict[company_url]:
-                            job_ids_dict[company_url].append(job_id)
-                            jobstosend.append((job_title, job_href))
+                        posted_div_element = job_element.find_elements(By.CLASS_NAME, 'info')[1]
+                        posted_on_element = posted_div_element.find_element(By.TAG_NAME, 'h2')
+                        updated_on_element = posted_div_element.find_element(By.CLASS_NAME, 'time-elapsed')
+                        posted_on = posted_on_element.text + "::" + updated_on_element.text
+                        
+                        if datetime.now().strftime("%B %d, %Y").lower() in posted_on.lower():
+                            job_href = job_title_element.get_attribute('href')
+                            job_title = job_title_element.text
+
+                            print(job_id, job_title, job_href, posted_on)
+                                # location = location_element.text
+                            if job_id not in job_ids_dict[company_url]:
+                                job_ids_dict[company_url].append(job_id)
+                                jobstosend.append((job_title, job_href, posted_on))
+                            else:
+                                print(f"Job ID {job_id} already in job_ids_dict")
                         else:
-                            print(f"Job ID {job_id} already in job_ids_dict")
-                    else:
-                        today = False
+                            today = False
                     
-            # except Exception as e:
-            #     print(f"An error occurred while processing {company_url}: {str(e)}")
-            #     continue
+            except Exception as e:
+                print(f"An error occurred while processing {company_url}: {str(e)}")
+                continue
         
          
 
@@ -118,7 +118,7 @@ while True:
                             # location = location_element.text
                             if job_id not in job_ids_dict[company_url]:
                                 job_ids_dict[company_url].append(job_id)
-                                jobstosend.append((job_title, job_href))
+                                jobstosend.append((job_title, job_href, posted_on))
                             else:
                                 print(f"Job ID {job_id} already in job_ids_dict")
                         else:
@@ -133,23 +133,22 @@ while True:
                 print(f"An error occurred while processing {company_url}: {str(e)}")
                 continue
     
-        print(len(job_ids_dict[company_urls[0]]))
-        print(len(jobstosend))
-
-        for job_title, job_href in jobstosend:
-            driver.get(job_href)
-            time.sleep(1)
-            job_posting_element = wait.until(EC.presence_of_element_located((By.XPATH, '//div[@data-automation-id="job-posting-details"]')))
-            job_posting_text = job_posting_element.text
-            redis_id = str(uuid.uuid4())
-            job_info = {'company_url': seturl,'job_title': job_title, 'job_href': job_href, 'job_posting_text': job_posting_text}
-            jobs.append((seturl, job_title, job_href, job_posting_text))
+        print(f"jobs at {company_url.split('//')[1].split('.wd')[0]} opened today: ", len(job_ids_dict[company_urls[0]]))
+        print("New jobs added: ", len(jobstosend))
+        for job_title, job_href, posted_on in jobstosend:
+            # driver.get(job_href)
+            # time.sleep(1)
+            # job_posting_element = wait.until(EC.presence_of_element_located((By.XPATH, '//div[@data-automation-id="job-posting-details"]')))
+            # job_posting_text = job_posting_element.text
+            # redis_id = str(uuid.uuid4())
+            job_info = {'company_url': seturl,'job_title': job_title, 'job_href': job_href, 'posted_on': posted_on}
+            jobs.append((seturl, job_title, job_href, posted_on))
 
 
     # Write job postings to a CSV file
     with open('job_postings.csv', 'w', newline='', encoding='utf-8') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(['companyurl','Job Title', 'Job Href', 'Job Posting'])
+        writer.writerow(['companyurl','Job Title', 'Job Href', 'Posted On'])
         for job in jobs:
             writer.writerow(job)
 
