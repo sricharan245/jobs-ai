@@ -1,2 +1,8 @@
 jobsai-env/
 /.DS_Store
+.gitignore
+job_ids_dict.pkl
+job_postings.csv
+test.py
+backups/
+housekeeping.py
