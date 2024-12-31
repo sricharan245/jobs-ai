@@ -36,6 +36,7 @@ company_urls = [
     'https://cat.wd5.myworkdayjobs.com/en-US/CaterpillarCareers?timeType=5367d85d9d52017a289c2294d7135900&jobFamily=e1ea3238dd28100047a9d21828480000&locationCountry=bc33aa3152ec42d4995f4791a106ed09',
     'https://intel.wd1.myworkdayjobs.com/en-US/External/details/Supply-Planning-Analyst_JR0267523?jobFamilyGroup=a55ea4dd831d1000c6fce5a0c4d30000&locations=1e4a4eb3adf101cc4e292078bf8199d0&locations=1e4a4eb3adf1016541777876bf8111cf&locations=1e4a4eb3adf1011246675c76bf81f8ce&locations=1e4a4eb3adf101b8aec18a77bf810dd0&locations=1e4a4eb3adf1018c4bf78f77bf8112d0&locations=1e4a4eb3adf10129d05fe377bf815dd0&locations=1e4a4eb3adf10118b1dfe877bf8162d0',
     'https://homedepot.wd5.myworkdayjobs.com/en-US/CareerDepot/?q=data%20scientist&locationCountry=bc33aa3152ec42d4995f4791a106ed09&workerSubType=3e82bdec28fd014fca89c83b1811b77b',
+    'https://amazon.jobs/en/search?offset=0&result_limit=10&sort=recent&category%5B%5D=machine-learning-science&category%5B%5D=business-intelligence&category%5B%5D=data-science&country%5B%5D=USA&distanceType=Mi&radius=24km&is_manager%5B%5D=0&latitude=&longitude=&loc_group_id=&loc_query=&base_query=&city=&country=&region=&county=&query_options=&'
 
 ]  # Add your company URLs here
 
@@ -45,30 +46,40 @@ for company_url in company_urls:
 
 while True:
     jobs = []
+    today = True
+
     for company_url in company_urls:
         jobstosend = []
-        driver.get(company_url)
-        seturl = company_url
-        try:
-            today = True
+        if "amazon" in company_url:
+            driver.get(company_url)
+            seturl = company_url
+            # try:
             while today:
                 time.sleep(2)
-                wait.until(EC.presence_of_element_located((By.XPATH, '//li[@class="css-1q2dra3"]')))
-                
-                job_elements = driver.find_elements(By.XPATH, '//li[@class="css-1q2dra3"]')
+                wait.until(EC.presence_of_element_located((By.CLASS_NAME, 'job-tile-lists')))
 
+                # job_elements = driver.find_elements(By.XPATH, '//div[@class="job-tile-lists"]')
+                job_elements = driver.find_elements(By.CLASS_NAME, 'job-tile')
+                
+                print(len(job_elements))
+                # break
                 for job_element in job_elements:
-                    job_title_element = job_element.find_element(By.XPATH, './/h3/a')
-                    job_id_element = job_element.find_element(By.XPATH, './/ul[@data-automation-id="subtitle"]/li')
-                    job_id = job_id_element.text
-                    posted_on_element = job_element.find_element(By.XPATH, './/dd[@class="css-129m7dg"][preceding-sibling::dt[contains(text(),"posted on")]]')
-                    posted_on = posted_on_element.text
-                    # location_element = job_element.find_element(By.XPATH, './/dd[@class="css-129m7dg"][preceding-sibling::dt[contains(text(),"location")]]')
-                    # location = location_element.text
-                    if 'posted today' in posted_on.lower():
+                    job_element = job_element.find_element(By.CLASS_NAME, 'job')
+                    job_title_element = job_element.find_element(By.CLASS_NAME, 'job-link')
+                    job_id_element = job_element.find_element(By.CLASS_NAME, 'list-unstyled').find_elements(By.TAG_NAME, 'li')[-1]
+                    job_id = job_id_element.text.split(":")[-1].strip()                    
+
+                    posted_div_element = job_element.find_elements(By.CLASS_NAME, 'info')[1]
+                    posted_on_element = posted_div_element.find_element(By.TAG_NAME, 'h2')
+                    updated_on_element = posted_div_element.find_element(By.CLASS_NAME, 'time-elapsed')
+                    posted_on = posted_on_element.text + "::" + updated_on_element.text
+                    
+                    if datetime.now().strftime("%B %d, %Y").lower() in posted_on.lower():
                         job_href = job_title_element.get_attribute('href')
                         job_title = job_title_element.text
-                        # location = location_element.text
+
+                        print(job_id, job_title, job_href, posted_on)
+                            # location = location_element.text
                         if job_id not in job_ids_dict[company_url]:
                             job_ids_dict[company_url].append(job_id)
                             jobstosend.append((job_title, job_href))
@@ -76,16 +87,52 @@ while True:
                             print(f"Job ID {job_id} already in job_ids_dict")
                     else:
                         today = False
+                    
+            # except Exception as e:
+            #     print(f"An error occurred while processing {company_url}: {str(e)}")
+            #     continue
+        
+         
 
-                next_button = driver.find_element(By.XPATH, '//button[@data-uxi-element-id="next"]')
-                if "disabled" in next_button.get_attribute("class"):
-                    break  # exit loop if the "next" button is disabled
-                
-                next_button.click()
-        except Exception as e:
-            print(f"An error occurred while processing {company_url}: {str(e)}")
-            continue
+        else:    
+            driver.get(company_url)
+            seturl = company_url
+            try:
+                while today:
+                    time.sleep(2)
+                    wait.until(EC.presence_of_element_located((By.XPATH, '//li[@class="css-1q2dra3"]')))
+                    
+                    job_elements = driver.find_elements(By.XPATH, '//li[@class="css-1q2dra3"]')
 
+                    for job_element in job_elements:
+                        job_title_element = job_element.find_element(By.XPATH, './/h3/a')
+                        job_id_element = job_element.find_element(By.XPATH, './/ul[@data-automation-id="subtitle"]/li')
+                        job_id = job_id_element.text
+                        posted_on_element = job_element.find_element(By.XPATH, './/dd[@class="css-129m7dg"][preceding-sibling::dt[contains(text(),"posted on")]]')
+                        posted_on = posted_on_element.text
+                        # location_element = job_element.find_element(By.XPATH, './/dd[@class="css-129m7dg"][preceding-sibling::dt[contains(text(),"location")]]')
+                        # location = location_element.text
+                        if 'posted today' in posted_on.lower():
+                            job_href = job_title_element.get_attribute('href')
+                            job_title = job_title_element.text
+                            # location = location_element.text
+                            if job_id not in job_ids_dict[company_url]:
+                                job_ids_dict[company_url].append(job_id)
+                                jobstosend.append((job_title, job_href))
+                            else:
+                                print(f"Job ID {job_id} already in job_ids_dict")
+                        else:
+                            today = False
+
+                    next_button = driver.find_element(By.XPATH, '//button[@data-uxi-element-id="next"]')
+                    if "disabled" in next_button.get_attribute("class"):
+                        break  # exit loop if the "next" button is disabled
+                    
+                    next_button.click()
+            except Exception as e:
+                print(f"An error occurred while processing {company_url}: {str(e)}")
+                continue
+    
         print(len(job_ids_dict[company_urls[0]]))
         print(len(jobstosend))
 
