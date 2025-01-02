@@ -6,3 +6,4 @@ job_postings.csv
 test.py
 backups/
 housekeeping.py
+__pycache__/
